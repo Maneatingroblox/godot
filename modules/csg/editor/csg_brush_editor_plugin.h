@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  register_types.cpp                                                    */
+/*  csg_brush_editor_plugin.h                                             */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,42 +28,67 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "register_types.h"
+#pragma once
 
-#include "csg_shape.h"
+#include "core/math/aabb.h"
+#include "editor/plugins/editor_plugin.h"
+#include "scene/resources/material.h"
 
-#include "core/object/class_db.h"
+class Button;
+class CheckBox;
+class EditorResourcePicker;
+class Label;
+class OptionButton;
+class PanelContainer;
+class SpinBox;
 
-#ifdef TOOLS_ENABLED
-#include "editor/csg_brush_editor_plugin.h"
-#include "editor/csg_gizmos.h"
-#endif
+class CSGBrushEditorPlugin : public EditorPlugin {
+	GDCLASS(CSGBrushEditorPlugin, EditorPlugin);
 
-void initialize_csg_module(ModuleInitializationLevel p_level) {
-	if (p_level == MODULE_INITIALIZATION_LEVEL_SCENE) {
-		GDREGISTER_ABSTRACT_CLASS(CSGShape3D);
-		GDREGISTER_ABSTRACT_CLASS(CSGPrimitive3D);
-		GDREGISTER_CLASS(CSGMesh3D);
-		GDREGISTER_CLASS(CSGSphere3D);
-		GDREGISTER_CLASS(CSGBox3D);
-		GDREGISTER_CLASS(CSGCylinder3D);
-		GDREGISTER_CLASS(CSGTorus3D);
-		GDREGISTER_CLASS(CSGPolygon3D);
-		GDREGISTER_CLASS(CSGCombiner3D);
-#ifndef NAVIGATION_3D_DISABLED
-		CSGShape3D::navmesh_parse_init();
-#endif // NAVIGATION_3D_DISABLED
-	}
-#ifdef TOOLS_ENABLED
-	if (p_level == MODULE_INITIALIZATION_LEVEL_EDITOR) {
-		EditorPlugins::add_by_type<EditorPluginCSG>();
-		EditorPlugins::add_by_type<CSGBrushEditorPlugin>();
-	}
-#endif
-}
+	Button *mode_button = nullptr;
+	PanelContainer *panel = nullptr;
+	Button *draw_button = nullptr;
+	Button *create_button = nullptr;
+	Button *apply_button = nullptr;
+	OptionButton *plane_option = nullptr;
+	SpinBox *grid_size = nullptr;
+	SpinBox *depth = nullptr;
+	SpinBox *plane_offset = nullptr;
+	SpinBox *texture_size = nullptr;
+	CheckBox *collision = nullptr;
+	EditorResourcePicker *texture_picker = nullptr;
+	Label *status = nullptr;
 
-void uninitialize_csg_module(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
-		return;
-	}
-}
+	Dictionary previous_layout;
+	bool enabled = false;
+	bool dragging = false;
+	bool has_draft = false;
+	ObjectID drag_camera;
+	Vector3 start;
+	Vector3 end;
+	Vector3::Axis normal_axis = Vector3::AXIS_Y;
+	AABB draft;
+
+	void _mode_toggled(bool p_enabled);
+	void _draw_toggled(bool p_enabled);
+	void _cancel_draft();
+	void _settings_changed(double p_value);
+	void _plane_changed(int p_index);
+	void _update_draft();
+	void _selection_changed();
+	bool _project(Camera3D *p_camera, const Vector2 &p_position, Vector3 &r_point) const;
+	void _create_brush();
+	Ref<StandardMaterial3D> _make_material() const;
+	void _apply_texture();
+	void _scene_changed(Node *p_root);
+
+public:
+	String get_plugin_name() const override { return "CSGBrushEditor"; }
+	AfterGUIInput forward_3d_gui_input(Camera3D *p_camera, const Ref<InputEvent> &p_event) override;
+	void forward_3d_force_draw_over_viewport(Control *p_overlay) override;
+	Dictionary get_state() const override;
+	void set_state(const Dictionary &p_state) override;
+	void clear() override;
+
+	CSGBrushEditorPlugin();
+};
